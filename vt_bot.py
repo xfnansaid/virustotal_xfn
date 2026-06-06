@@ -3,6 +3,8 @@ import httpx
 import logging
 import asyncio
 import random
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
@@ -12,12 +14,30 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# --- SECURE CREDENTIALS FROM ENVIRONMENT VARIABLES ---
+# --- SECURE CREDENTIALS ---
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 VIRUSTOTAL_API_KEY = os.environ.get("VIRUSTOTAL_API_KEY")
-# -----------------------------------------------------
 
-# ... (Keep the rest of your trivia, hacker steps, and functions exactly the same!)
+# --- NEW: Dummy Web Server to satisfy Render ---
+def keep_alive():
+    class DummyHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b"Bot is alive and running!")
+            
+        def log_message(self, format, *args):
+            pass # Disables web server logs to keep your terminal clean
+
+    # Render automatically assigns a port via the PORT environment variable
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), DummyHandler)
+    server.serve_forever()
+
+# Start the web server in a background thread
+threading.Thread(target=keep_alive, daemon=True).start()
+# -----------------------------------------------
 
 # Mixed Trivia Library
 TRIVIA_BANK = [
@@ -37,6 +57,8 @@ HACKER_STEPS = [
     "[+] Cross-referencing global malware registries...",
     "[+] Executing deep packet inspection..."
 ]
+
+# ... (Keep your start_command, scan_url, and the if __name__ == '__main__': block exactly the same as before!)
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
